@@ -1,0 +1,15 @@
+﻿<Application
+    x:Class="CardMakerGachaSqlGenerator.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:CardMakerGachaSqlGenerator"
+    xmlns:ui="clr-namespace:CardMakerGachaSqlGenerator.UI"
+    StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <Style TargetType="TextBox">
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <ui:LoadCardImageConverter x:Key="LoadCardImageConverter" />
+        <ui:GetCardNameConverter x:Key="GetCardNameConverter" />
+    </Application.Resources>
+</Application>
