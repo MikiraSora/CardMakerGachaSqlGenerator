@@ -45,6 +45,11 @@ namespace CardMakerGachaSqlGenerator
                     return $"'{x.Value}'";
                 }
 
+                if (x.Type.IsEnum)
+                {
+                    return $"{(int)x.Value}";
+                }
+
                 return x.Value.ToString();
             }))})";
 

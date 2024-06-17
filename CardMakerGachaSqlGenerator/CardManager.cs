@@ -80,7 +80,7 @@ namespace CardMakerGachaSqlGenerator
             var rarity = rarityStr.ToLower() switch
             {
                 "n" => 1,
-                "s" => 2,
+                "r" => 2,
                 "sr" => 3,
                 "ssr" => 4,
                 _ => 0,
