@@ -11,5 +11,6 @@
         </Style>
         <ui:LoadCardImageConverter x:Key="LoadCardImageConverter" />
         <ui:GetCardNameConverter x:Key="GetCardNameConverter" />
+        <ui:LoadTheaterImageConverter x:Key="LoadTheaterImageConverter" />
     </Application.Resources>
 </Application>

@@ -18,11 +18,8 @@ namespace CardMakerGachaSqlGenerator.Base
         [ObservableProperty]
         private int cardId;
 
-        public string Name => CardManager.GetCardName(CardId);
-
-        [SqlColnum("rarity")]
-        [ObservableProperty]
-        private int rarity;
+        public string Name => GameResourceManager.GetCardName(CardId);
+        public int Rarity => GameResourceManager.GetCardInfo(CardId)?.Rarity ?? -1;
 
         [SqlColnum("weight")]
         [ObservableProperty]

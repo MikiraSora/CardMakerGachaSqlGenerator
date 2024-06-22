@@ -14,7 +14,7 @@ using System.Windows.Media.Imaging;
 
 namespace CardMakerGachaSqlGenerator.UI
 {
-    public partial class LoadCardImageConverter : IValueConverter
+    public partial class LoadTheaterImageConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
@@ -30,9 +30,9 @@ namespace CardMakerGachaSqlGenerator.UI
 
         private partial class AsyncLoadImageTask : ObservableObject
         {
-            public AsyncLoadImageTask(int cardId)
+            public AsyncLoadImageTask(int theaterId)
             {
-                var file = GameResourceManager.GetCardAssetFilePath(cardId);
+                var file = GameResourceManager.GetTheaterImageFile(theaterId);
                 LoadValue(file);
             }
 

@@ -12,7 +12,7 @@ namespace CardMakerGachaSqlGenerator.UI
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is int id && (CardManager.CardInfoMap?.TryGetValue(id, out var info) ?? false))
+            if (value is int id && (GameResourceManager.CardInfoMap?.TryGetValue(id, out var info) ?? false))
                 return info.Name;
 
             return "<ID-NOT-EXIST>";

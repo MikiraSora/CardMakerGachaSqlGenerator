@@ -41,6 +41,15 @@ namespace CardMakerGachaSqlGenerator
         private int inputCardId;
 
         [ObservableProperty]
+        private ObservableCollection<Theater> theaterList = new();
+
+        [ObservableProperty]
+        private Theater currentSelectedTheater;
+
+        [ObservableProperty]
+        private SubTheater currentSelectedSubTheater;
+
+        [ObservableProperty]
         private ObservableCollection<Gacha> gachaList = new();
 
         [ObservableProperty]
@@ -54,6 +63,15 @@ namespace CardMakerGachaSqlGenerator
 
         [ObservableProperty]
         private GachaCard currentSelectedGachaCard;
+
+        [ObservableProperty]
+        private Supply currentSupply = new();
+
+        [ObservableProperty]
+        private int inputUserAimeId;
+
+        [ObservableProperty]
+        private int inputSubTheaterId;
 
         private string GetApiEndPointUrl(string apiName)
         {
@@ -74,7 +92,12 @@ namespace CardMakerGachaSqlGenerator
                 var configStr = File.ReadAllText(ConfigFilePath);
                 Config = JsonSerializer.Deserialize<Config>(configStr) ?? new();
                 IsEnable = false;
-                CardManager.Reload(Config.PackagePath).ContinueWith(x => IsEnable = true).ConfigureAwait(false);
+
+                Task.WhenAll([
+                    GameResourceManager.ReloadSDDTResource(Config.PackagePath),
+                    GameResourceManager.ReloadSDEDResource(Config.SdedPackagePath)])
+                    .ContinueWith(x => IsEnable = true)
+                    .ConfigureAwait(false);
             }
             catch
             {
@@ -92,7 +115,7 @@ namespace CardMakerGachaSqlGenerator
             }
 
             IsEnable = false;
-            await CardManager.Reload(Config.PackagePath);
+            await Task.WhenAll([GameResourceManager.ReloadSDDTResource(Config.PackagePath), GameResourceManager.ReloadSDEDResource(Config.SdedPackagePath)]);
             IsEnable = true;
             MessageBox.Show("读取成功");
         }
@@ -200,7 +223,7 @@ namespace CardMakerGachaSqlGenerator
                 .Select(x => (SqlGenerator.GenerateInsert("ongeki_game_gacha_card", x), x.CardId))
                 .OrderBy(x => x.CardId))
             {
-                var cardInfo = CardManager.GetCardInfo(r.CardId);
+                var cardInfo = GameResourceManager.GetCardInfo(r.CardId);
                 if (cardInfo is not null)
                     sb.AppendLine($"-- {cardInfo.Name}");
                 sb.AppendLine(r.Item1);
@@ -220,7 +243,7 @@ namespace CardMakerGachaSqlGenerator
         [RelayCommand]
         private void OnAddGachaCardManually()
         {
-            if (CardManager.GetCardInfo(InputCardId) is not CardInfo cardInfo)
+            if (GameResourceManager.GetCardInfo(InputCardId) is not CardInfo cardInfo)
             {
                 MessageBox.Show("找不到此卡");
                 return;
@@ -230,7 +253,6 @@ namespace CardMakerGachaSqlGenerator
             {
                 CardId = cardInfo.Id,
                 GachaId = CurrentSelectedGacha.GachaId,
-                Rarity = cardInfo.Rarity,
                 Weight = 1
             };
             CurrentSelectedGacha.Cards.Insert(0, gachaCard);
@@ -247,12 +269,11 @@ namespace CardMakerGachaSqlGenerator
             {
                 try
                 {
-                    var cardInfo = await CardManager.ParseCardXmlFile(file);
+                    var cardInfo = await GameResourceManager.ParseCardXmlFile(file);
                     var gachaCard = new GachaCard()
                     {
                         CardId = cardInfo.Id,
                         GachaId = CurrentSelectedGacha.GachaId,
-                        Rarity = cardInfo.Rarity,
                         Weight = 1
                     };
 
@@ -279,6 +300,211 @@ namespace CardMakerGachaSqlGenerator
             {
                 UseShellExecute = true
             });
+        }
+
+        [RelayCommand]
+        private async Task OnSupplyCardListDragEnd(DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+                return;
+            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+
+            foreach (var file in files)
+            {
+                try
+                {
+                    var cardInfo = await GameResourceManager.ParseCardXmlFile(file);
+                    var gachaCard = new SupplyGachaCard()
+                    {
+                        CardId = cardInfo.Id,
+                        SupplyId = CurrentSupply?.SupplyId ?? 0
+                    };
+
+                    CurrentSupply.Cards.Insert(0, gachaCard);
+                }
+                catch (Exception)
+                {
+
+                    throw;
+                }
+            }
+        }
+
+        [RelayCommand]
+        private async Task OnFetchSupplyFromServer()
+        {
+            if (InputUserAimeId == 0)
+            {
+                MessageBox.Show("请先填写用户AimeId");
+                return;
+            }
+
+            var supplyUrl = GetApiEndPointUrl("CMGetUserGachaSupplyApi");
+
+            var resp = await ApiCaller.PostJsonAsync<CMGetUserGachaSupplyApiResp>(supplyUrl, new
+            {
+                userId = InputUserAimeId
+            });
+            var supply = new Supply()
+            {
+                SupplyId = resp.SupplyId
+            };
+            foreach (var cardId in resp.SupplyCardList)
+            {
+                var supplyCard = new SupplyGachaCard()
+                {
+                    CardId = cardId,
+                    SupplyId = supply.SupplyId
+                };
+                supply.Cards.Add(supplyCard);
+            }
+
+            CurrentSupply = supply;
+        }
+
+        [RelayCommand]
+        private void OnCreateNewSupply()
+        {
+            CurrentSupply = new();
+        }
+
+        [RelayCommand]
+        private async Task OnGenerateSupplySql()
+        {
+            if (CurrentSupply.UserId == 0)
+            {
+                MessageBox.Show("请先填写用户UserId");
+                return;
+            }
+            if (CurrentSupply.Cards.Count == 0)
+            {
+                MessageBox.Show("卡池为空");
+                return;
+            }
+
+            var sb = new StringBuilder();
+
+            //打印相关信息
+            sb.AppendLine($"-- Created for supply id: {CurrentSupply.SupplyId}");
+            sb.AppendLine(SqlGenerator.GenerateInsert("ongeki_user_gacha_supply", CurrentSupply));
+            sb.AppendLine();
+
+            foreach (var r in CurrentSupply.Cards
+                .DistinctBy(x => x.CardId)
+                .AsParallel()
+                .Select(x =>
+                {
+                    x.SupplyId = CurrentSupply.SupplyId;
+                    return (SqlGenerator.GenerateInsert("ongeki_user_gacha_card_supply", x), x.CardId);
+                })
+                .OrderBy(x => x.CardId))
+            {
+                var cardInfo = GameResourceManager.GetCardInfo(r.CardId);
+                if (cardInfo is not null)
+                    sb.AppendLine($"-- {cardInfo.Name}");
+                sb.AppendLine(r.Item1);
+                sb.AppendLine();
+            }
+
+            ShowContentAsNotepad(sb.ToString());
+        }
+
+
+        [RelayCommand]
+        private async Task OnCleanAndFetchTheaterFromServer()
+        {
+            TheaterList.Clear();
+
+            var theaterUrl = GetApiEndPointUrl("GetGameTheaterApi");
+            var resp = await ApiCaller.PostJsonAsync<GetGameTheaterApiResp>(theaterUrl, new
+            {
+                isAllTheater = true
+            });
+
+            var theaterList = resp.GameTheaterList ?? Enumerable.Empty<Theater>();
+
+            foreach (var theater in theaterList)
+                TheaterList.Add(theater);
+        }
+
+        [RelayCommand]
+        private void OnCreateNewTheater()
+        {
+            var newTheater = new Theater()
+            {
+                TheaterName = "新的漫画"
+            };
+            TheaterList.Add(newTheater);
+        }
+
+        [RelayCommand]
+        private void OnGenerateTheaterSql()
+        {
+            if (CurrentSelectedTheater is null)
+            {
+                MessageBox.Show("请先新建或选择Theater");
+                return;
+            }
+            if (CurrentSelectedTheater.GameSubTheaterList is null)
+            {
+                MessageBox.Show("漫画页面列表为空");
+                return;
+            }
+
+            var sb = new StringBuilder();
+
+            CurrentSelectedTheater.SerializedGameSubTheaterList = string.Join(",", CurrentSelectedTheater.GameSubTheaterList.Select(x => x.Id));
+            sb.AppendLine(SqlGenerator.GenerateInsert("ongeki_game_theater", CurrentSelectedTheater));
+
+            ShowContentAsNotepad(sb.ToString());
+        }
+
+
+        [RelayCommand]
+        private void OnSubTheaterListDragEnd(DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+                return;
+            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            var reg = new Regex(@"ui_manga_(\d+)");
+
+            var addList = new List<SubTheater>();
+            foreach (var file in files)
+            {
+                try
+                {
+                    var fileName = Path.GetFileName(file);
+                    var match = reg.Match(fileName);
+                    if (!match.Success)
+                        continue;
+                    var id = int.Parse(match.Groups[1].Value);
+
+                    var subTheater = new SubTheater()
+                    {
+                        TheaterId = CurrentSelectedTheater.TheaterId,
+                        Id = id,
+                        No = CurrentSelectedTheater.GameSubTheaterList.Count
+                    };
+
+                    addList.Add(subTheater);
+                }
+                catch
+                {
+
+                }
+            }
+
+            var copyList = CurrentSelectedTheater.GameSubTheaterList.Concat(addList);
+            var chars = string.Join(",", copyList.Select(x => x.Id));
+
+            if (chars.Length > 255)
+            {
+                MessageBox.Show($"要添加的页面太多(idStr.Length({chars.Length}) > 255)");
+                return;
+            }
+
+            foreach (var add in addList)
+                CurrentSelectedTheater.GameSubTheaterList.Add(add);
         }
     }
 }

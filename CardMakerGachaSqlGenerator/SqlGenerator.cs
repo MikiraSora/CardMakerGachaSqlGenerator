@@ -50,6 +50,11 @@ namespace CardMakerGachaSqlGenerator
                     return $"{(int)x.Value}";
                 }
 
+                if (x.Value is null)
+                {
+                    return "NULL";
+                }
+
                 return x.Value.ToString();
             }))})";
 

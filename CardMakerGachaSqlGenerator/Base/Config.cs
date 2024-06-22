@@ -23,5 +23,8 @@ namespace CardMakerGachaSqlGenerator.Base
 
         [ObservableProperty]
         private string packagePath;
+
+        [ObservableProperty]
+        private string sdedPackagePath;
     }
 }

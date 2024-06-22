@@ -14,10 +14,12 @@ using System.Xml.XPath;
 
 namespace CardMakerGachaSqlGenerator
 {
-    public static class CardManager
+    public static class GameResourceManager
     {
         public static ImmutableDictionary<int, string> CardImageFileMap { get; private set; }
         public static ImmutableDictionary<int, CardInfo> CardInfoMap { get; private set; }
+        public static ImmutableDictionary<int, string> TheaterImageFileMap { get; private set; }
+        public static ImmutableDictionary<int, string> BannerImageFileMap { get; private set; }
 
         public static CardInfo GetCardInfo(int id)
         {
@@ -35,8 +37,19 @@ namespace CardMakerGachaSqlGenerator
             return "<ID-NOT-EXIST>";
         }
 
-        public static async Task Reload(string packagePath)
+        public static string GetTheaterImageFile(int id)
         {
+            if (TheaterImageFileMap?.TryGetValue(id, out var path) ?? false)
+                return path;
+
+            return null;
+        }
+
+        public static async Task ReloadSDDTResource(string packagePath)
+        {
+            if (!Directory.Exists(packagePath))
+                return;
+
             var cardXmlFiles = Directory.GetFiles(packagePath, "Card.xml", SearchOption.AllDirectories);
             var cardImageFiles = Directory.GetFiles(packagePath, "ui_card_*_s", SearchOption.AllDirectories);
 
@@ -66,6 +79,37 @@ namespace CardMakerGachaSqlGenerator
 
             CardImageFileMap = imageResult.ToImmutableDictionary();
             CardInfoMap = result.ToImmutableDictionary(x => x.Id, x => x);
+        }
+
+        public static async Task ReloadSDEDResource(string packagePath)
+        {
+            if (!Directory.Exists(packagePath))
+                return;
+
+            var cardImageFiles = Directory.GetFiles(packagePath, "ui_manga_*", SearchOption.AllDirectories);
+            var bannerImageFiles = Directory.GetFiles(packagePath, "ui_banner_*", SearchOption.AllDirectories);
+
+            var theaterImageMap = new ConcurrentDictionary<int, string>();
+            var bannerImageMap = new ConcurrentDictionary<int, string>();
+            var bannerSmallImageMap = new ConcurrentDictionary<int, string>();
+
+            var reg = new Regex(@"ui_\w+?_(\d+)");
+            ValueTask parseImageFileName(IDictionary<int, string> map, string file)
+            {
+                var fileName = Path.GetFileName(file);
+                var match = reg.Match(fileName);
+                if (!match.Success)
+                    return ValueTask.CompletedTask;
+                var id = int.Parse(match.Groups[1].Value);
+                map[id] = file;
+                return ValueTask.CompletedTask;
+            }
+
+            await Task.WhenAll([Parallel.ForEachAsync(cardImageFiles, (file, ct) => parseImageFileName(theaterImageMap, file)),
+                Parallel.ForEachAsync(bannerImageFiles, (file, ct) => parseImageFileName(bannerImageMap, file))]);
+
+            TheaterImageFileMap = theaterImageMap.ToImmutableDictionary();
+            BannerImageFileMap = bannerImageMap.ToImmutableDictionary();
         }
 
         public static async ValueTask<CardInfo> ParseCardXmlFile(string filePath)
