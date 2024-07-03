@@ -19,6 +19,8 @@ namespace CardMakerGachaSqlGenerator.Base
         private int cardId;
 
         public string Name => GameResourceManager.GetCardName(CardId);
+
+        [SqlColnum("rarity")]
         public int Rarity => GameResourceManager.GetCardInfo(CardId)?.Rarity ?? -1;
 
         [SqlColnum("weight")]

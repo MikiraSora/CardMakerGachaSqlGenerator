@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CardMakerGachaSqlGenerator.Base
 {
-    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
     public class SqlColnumAttribute : Attribute
     {
         public SqlColnumAttribute(string sqlColnumName)

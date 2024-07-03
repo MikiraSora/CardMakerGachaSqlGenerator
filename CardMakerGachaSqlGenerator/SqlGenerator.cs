@@ -10,26 +10,27 @@ namespace CardMakerGachaSqlGenerator
 {
     public static class SqlGenerator
     {
+        record TableNameValuePair(string Name, object Value, Type Type);
+
         public static string GenerateSqlNameValuePairs(object obj)
         {
             var type = obj.GetType();
             var fieldInfos = type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic);
+            var propInfos = type.GetProperties().Concat(type.GetProperties(BindingFlags.Instance | BindingFlags.NonPublic)).DistinctBy(x => x.Name);
 
             var pairs = fieldInfos.Select(x =>
             {
                 var attr = x.GetCustomAttribute<SqlColnumAttribute>();
                 if (attr != null)
-                {
-                    return new
-                    {
-                        Name = attr.SqlColnumName,
-                        Value = x.GetValue(obj),
-                        Type = x.FieldType
-                    };
-                }
-
+                    return new TableNameValuePair(attr.SqlColnumName, x.GetValue(obj), x.FieldType);
                 return default;
-            }).Where(x => x != null).OrderBy(x => x.Name).ToArray();
+            }).Concat(propInfos.Select(x =>
+            {
+                var attr = x.GetCustomAttribute<SqlColnumAttribute>();
+                if (attr != null)
+                    return new TableNameValuePair(attr.SqlColnumName, x.GetValue(obj), x.PropertyType);
+                return default;
+            })).Where(x => x != null).OrderBy(x => x.Name).ToArray();
 
             var names = $"({string.Join(",", pairs.Select(x => x.Name))})";
             var values = $"({string.Join(",", pairs.Select(x =>
