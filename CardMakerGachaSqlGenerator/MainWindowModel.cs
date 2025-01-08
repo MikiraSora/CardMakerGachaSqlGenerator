@@ -561,12 +561,21 @@ namespace CardMakerGachaSqlGenerator
             if (MessageBox.Show("是否要重新计算所有卡片weight值成符合概率的", "提醒", button: MessageBoxButton.YesNo) != MessageBoxResult.Yes)
                 return;
 
-            var totalWeight = 10000;
-            var ssrChance = (int)(AcutalChanceCardSSR / 100 * totalWeight);
-            var srpChance = (int)(AcutalChanceCardSRPlus / 100 * totalWeight);
-            var srChance = (int)(AcutalChanceCardSR / 100 * totalWeight);
-            var rChance = (int)(AcutalChanceCardR / 100 * totalWeight);
-            var nChance = (int)(AcutalChanceCardN / 100 * totalWeight);
+            var countMap = CurrentSelectedGacha.Cards.GroupBy(x => x.Rarity).ToDictionary(x => x.Key, x => x.Count());
+
+            var totalWeight = 100 * countMap.Values.Max();
+
+            var ssrCount = countMap.GetValueOrDefault(4, 0);
+            var srCount = countMap.GetValueOrDefault(3, 0);
+            var rCount = countMap.GetValueOrDefault(2, 0);
+            var nCount = countMap.GetValueOrDefault(1, 0);
+            var srpCount = countMap.GetValueOrDefault(0, 0);
+
+            var ssrChance = (int)(AcutalChanceCardSSR * totalWeight / ssrCount);
+            var srpChance = (int)(AcutalChanceCardSRPlus * totalWeight / srpCount);
+            var srChance = (int)(AcutalChanceCardSR * totalWeight / srCount);
+            var rChance = (int)(AcutalChanceCardR * totalWeight / rCount);
+            var nChance = (int)(AcutalChanceCardN * totalWeight / nCount);
 
             foreach (var card in CurrentSelectedGacha.Cards)
             {
