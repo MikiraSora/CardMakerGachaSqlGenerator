@@ -35,23 +35,27 @@ namespace CardMakerGachaSqlGenerator
             var names = $"({string.Join(",", pairs.Select(x => x.Name))})";
             var values = $"({string.Join(",", pairs.Select(x =>
             {
-                if (x.Type == typeof(DateTime))
+                var type = x.Type;
+                if (Nullable.GetUnderlyingType(type) is Type ut)
+                    type = ut;
+
+                if (type == typeof(DateTime))
                 {
                     //2024-06-17 00:11:12
                     return $"'{x.Value:yyyy-MM-dd HH:mm:ss}'";
                 }
 
-                if (x.Type == typeof(string))
+                if (type == typeof(string))
                 {
                     return $"'{x.Value}'";
                 }
 
-                if (x.Type.IsEnum)
+                if (type.IsEnum)
                 {
                     return $"{(int)x.Value}";
                 }
 
-                if (x.Value is null)
+                if (type is null)
                 {
                     return "NULL";
                 }

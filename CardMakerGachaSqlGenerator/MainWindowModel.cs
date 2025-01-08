@@ -73,13 +73,58 @@ namespace CardMakerGachaSqlGenerator
         [ObservableProperty]
         private int inputSubTheaterId;
 
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardSSR))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardSRPlus))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardSR))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardR))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardN))]
+        private float chanceCardSSR;
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardSSR))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardSRPlus))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardSR))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardR))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardN))]
+        private float chanceCardSRPlus;
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardSSR))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardSRPlus))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardSR))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardR))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardN))]
+        private float chanceCardSR;
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardSSR))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardSRPlus))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardSR))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardR))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardN))]
+        private float chanceCardR;
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardSSR))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardSRPlus))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardSR))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardR))]
+        [NotifyPropertyChangedFor(nameof(AcutalChanceCardN))]
+        private float chanceCardN;
+
+        public float chanceTotal => ChanceCardSSR + ChanceCardSRPlus + ChanceCardSR + ChanceCardR + ChanceCardN;
+
+        public float AcutalChanceCardSSR => ChanceCardSSR * 100f / chanceTotal;
+        public float AcutalChanceCardSRPlus => ChanceCardSRPlus * 100f / chanceTotal;
+        public float AcutalChanceCardSR => ChanceCardSR * 100f / chanceTotal;
+        public float AcutalChanceCardR => ChanceCardR * 100f / chanceTotal;
+        public float AcutalChanceCardN => ChanceCardN * 100f / chanceTotal;
+
+
         private string GetApiEndPointUrl(string apiName)
         {
             var url = Config.AquaURL;
             if (!url.EndsWith("/"))
                 url += "/";
-            url += $"OngekiServlet/{Config.RomVersion}/{Config.ClientId}/{apiName}";
-            //url += $"OngekiServlet/{apiName}";
+            //url += $"OngekiServlet/{Config.RomVersion}/{Config.ClientId}/{apiName}";
+            url += $"OngekiServlet/{apiName}";
             return url;
         }
 
@@ -365,7 +410,10 @@ namespace CardMakerGachaSqlGenerator
         [RelayCommand]
         private void OnCreateNewSupply()
         {
-            CurrentSupply = new();
+            CurrentSupply = new()
+            {
+                CreateDate = DateTime.Now,
+            };
         }
 
         [RelayCommand]
@@ -505,6 +553,44 @@ namespace CardMakerGachaSqlGenerator
 
             foreach (var add in addList)
                 CurrentSelectedTheater.GameSubTheaterList.Add(add);
+        }
+
+        [RelayCommand]
+        private void OnApplyChangeToWeight()
+        {
+            if (MessageBox.Show("是否要重新计算所有卡片weight值成符合概率的", "提醒", button: MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+                return;
+
+            var totalWeight = 10000;
+            var ssrChance = (int)(AcutalChanceCardSSR / 100 * totalWeight);
+            var srpChance = (int)(AcutalChanceCardSRPlus / 100 * totalWeight);
+            var srChance = (int)(AcutalChanceCardSR / 100 * totalWeight);
+            var rChance = (int)(AcutalChanceCardR / 100 * totalWeight);
+            var nChance = (int)(AcutalChanceCardN / 100 * totalWeight);
+
+            foreach (var card in CurrentSelectedGacha.Cards)
+            {
+                switch (card.Rarity)
+                {
+                    case 4:
+                        card.Weight = ssrChance;
+                        break;
+                    case 3:
+                        card.Weight = srChance;
+                        break;
+                    case 2:
+                        card.Weight = rChance;
+                        break;
+                    case 1:
+                        card.Weight = nChance;
+                        break;
+                    case 0:
+                        card.Weight = srpChance;
+                        break;
+                }
+            }
+
+            MessageBox.Show("计算完成");
         }
     }
 }

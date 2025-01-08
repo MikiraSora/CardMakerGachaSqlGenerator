@@ -9,11 +9,11 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="clr-namespace:CardMakerGachaSqlGenerator.UI"
     Title="CardMaker Gacha Sql Generator"
-    Width="800"
-    Height="450"
+    Width="1200"
+    Height="660"
     d:DataContext="{d:DesignInstance Type=UI:MainWindowModel,
                                      IsDesignTimeCreatable=False}"
-    ResizeMode="NoResize"
+    ResizeMode="CanResizeWithGrip"
     mc:Ignorable="d">
     <TabControl x:Name="mainContent" IsEnabled="{Binding IsEnable}">
         <TabItem Header="首页">
@@ -208,7 +208,7 @@
 
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     <StackPanel>
@@ -227,6 +227,54 @@
                             Padding="15,5"
                             Command="{Binding GenerateGachaCardSqlCommand}"
                             Content="生成sql" />
+                        <GroupBox Header="批量设置Weight">
+                            <StackPanel>
+                                <StackPanel Margin="0,5,0,0" Orientation="Horizontal">
+                                    <Label Width="40" Content="SSR:" />
+                                    <TextBox Width="100" Text="{Binding ChanceCardSSR}" />
+                                    <TextBlock
+                                        Margin="10,0"
+                                        VerticalAlignment="Center"
+                                        Text="{Binding AcutalChanceCardSSR, StringFormat=实际概率: {0:F2}%}" />
+                                </StackPanel>
+                                <StackPanel Margin="0,5,0,0" Orientation="Horizontal">
+                                    <Label Width="40" Content="SR+:" />
+                                    <TextBox Width="100" Text="{Binding ChanceCardSRPlus}" />
+                                    <TextBlock
+                                        Margin="10,0"
+                                        VerticalAlignment="Center"
+                                        Text="{Binding AcutalChanceCardSRPlus, StringFormat=实际概率: {0:F2}%}" />
+                                </StackPanel>
+                                <StackPanel Margin="0,5,0,0" Orientation="Horizontal">
+                                    <Label Width="40" Content="SR:" />
+                                    <TextBox Width="100" Text="{Binding ChanceCardSR}" />
+                                    <TextBlock
+                                        Margin="10,0"
+                                        VerticalAlignment="Center"
+                                        Text="{Binding AcutalChanceCardSR, StringFormat=实际概率: {0:F2}%}" />
+                                </StackPanel>
+                                <StackPanel Margin="0,5,0,0" Orientation="Horizontal">
+                                    <Label Width="40" Content="R:" />
+                                    <TextBox Width="100" Text="{Binding ChanceCardR}" />
+                                    <TextBlock
+                                        Margin="10,0"
+                                        VerticalAlignment="Center"
+                                        Text="{Binding AcutalChanceCardR, StringFormat=实际概率: {0:F2}%}" />
+                                </StackPanel>
+                                <StackPanel Margin="0,5,0,0" Orientation="Horizontal">
+                                    <Label Width="40" Content="N:" />
+                                    <TextBox Width="100" Text="{Binding ChanceCardN}" />
+                                    <TextBlock
+                                        Margin="10,0"
+                                        VerticalAlignment="Center"
+                                        Text="{Binding AcutalChanceCardN, StringFormat=实际概率: {0:F2}%}" />
+                                </StackPanel>
+                                <Button
+                                    Margin="5"
+                                    Command="{Binding ApplyChangeToWeightCommand}"
+                                    Content="应用" />
+                            </StackPanel>
+                        </GroupBox>
                     </StackPanel>
 
                     <Grid Grid.Row="2">
@@ -258,16 +306,6 @@
                                     Text="{Binding CurrentSelectedGachaCard.CardId, Converter={StaticResource GetCardNameConverter}}"
                                     TextWrapping="WrapWithOverflow" />
                             </Grid>
-                            <StackPanel Margin="0,30,0,0" Orientation="Horizontal">
-                                <Label
-                                    VerticalAlignment="Center"
-                                    Content="Weight:"
-                                    FontWeight="Bold" />
-                                <TextBox
-                                    Width="50"
-                                    VerticalAlignment="Center"
-                                    Text="{Binding CurrentSelectedGachaCard.Weight}" />
-                            </StackPanel>
                         </StackPanel>
                     </Grid>
                 </Grid>
@@ -290,7 +328,55 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <ListView
+
+                    <DataGrid
+                        Grid.Row="1"
+                        AutoGenerateColumns="False"
+                        CanUserAddRows="False"
+                        Drop="ListView_Drop"
+                        ItemsSource="{Binding CurrentSelectedGacha.Cards}"
+                        ScrollViewer.CanContentScroll="True"
+                        SelectedItem="{Binding CurrentSelectedGachaCard}"
+                        SelectionMode="Extended"
+                        VirtualizingPanel.IsVirtualizing="True"
+                        VirtualizingPanel.VirtualizationMode="Recycling">
+                        <i:Interaction.Behaviors>
+                            <ui:DropFileBehavior DragEndCommand="{Binding DragEndCommand}" />
+                            <ui:DataGridMultiSelectionBehavior SelectedItems="{Binding CurrentSelectedGachaCards}" />
+                        </i:Interaction.Behaviors>
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Command="{Binding DeleteSelectedGachaCardsCommand}" Header="删除" />
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="FontWeight" Value="Bold" />
+                                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                            </Style>
+                        </DataGrid.ColumnHeaderStyle>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn
+                                Width="400"
+                                Binding="{Binding Name}"
+                                Header="Name"
+                                IsReadOnly="True" />
+                            <DataGridTextColumn
+                                Width="70"
+                                Binding="{Binding Weight, UpdateSourceTrigger=PropertyChanged}"
+                                Header="Weight">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Center" />
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridCheckBoxColumn Binding="{Binding IsSelect}" Header="IsSelect" />
+                            <DataGridCheckBoxColumn Binding="{Binding IsPickup}" Header="IsPickup" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!--<ListView
                         Grid.Row="1"
                         Margin="0,2"
                         Drop="ListView_Drop"
@@ -323,13 +409,23 @@
                                     Width="50"
                                     DisplayMemberBinding="{Binding Weight}"
                                     Header="Weight" />
+                                <GridViewColumn Header="IsSelect">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox
+                                                HorizontalAlignment="Center"
+                                                HorizontalContentAlignment="Center"
+                                                IsChecked="{Binding IsSelect}" />
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
                                 <GridViewColumn
                                     Width="120"
                                     DisplayMemberBinding="{Binding Name}"
                                     Header="Name" />
                             </GridView>
                         </ListView.View>
-                    </ListView>
+                    </ListView>-->
                 </Grid>
             </Grid>
         </TabItem>
@@ -397,6 +493,13 @@
                                         VerticalAlignment="Center"
                                         Background="LightGray"
                                         Text="{Binding CurrentSupply.UserSupplyDate}" />
+                                </StackPanel>
+                                <StackPanel Margin="5" Orientation="Horizontal">
+                                    <Label Content="CreateDate:" />
+                                    <DatePickerTextBox
+                                        VerticalAlignment="Center"
+                                        Background="LightGray"
+                                        Text="{Binding CurrentSupply.CreateDate}" />
                                 </StackPanel>
                             </StackPanel>
                         </GroupBox>

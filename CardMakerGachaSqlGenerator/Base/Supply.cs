@@ -23,6 +23,10 @@ namespace CardMakerGachaSqlGenerator.Base
         private DateTime? userSupplyDate;
 
         [ObservableProperty]
+        [SqlColnum("create_date")]
+        private DateTime? createDate;
+
+        [ObservableProperty]
         [SqlColnum("user_id")]
         private int userId;
 

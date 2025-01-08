@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using TexturePlugin;
 
 namespace CardMakerGachaSqlGenerator
@@ -99,7 +100,14 @@ namespace CardMakerGachaSqlGenerator
                     if ((picData?.Length ?? 0) == 0)
                         continue;
 
-                    byte[] decData = TextureEncoderDecoder.Decode(picData, width, height, format);
+                    byte[] decData = default;
+                    try
+                    {
+                        decData = TextureEncoderDecoder.Decode(picData, width, height, format);
+                    }
+                    catch
+                    {
+                    }
 
                     if (decData == null)
                         continue;

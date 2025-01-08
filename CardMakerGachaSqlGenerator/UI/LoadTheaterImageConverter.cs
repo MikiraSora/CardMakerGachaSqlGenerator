@@ -42,6 +42,8 @@ namespace CardMakerGachaSqlGenerator.UI
                     return;
 
                 var imgData = await JacketGenerateWrapper.GetMainImageDataAsync(default, imgFilePath);
+                if (imgData is null)
+                    return;
 
                 AsyncValue = await Task.Run(() =>
                 {
